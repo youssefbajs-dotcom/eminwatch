@@ -98,32 +98,35 @@ def login():
                 background-color: #0f0f12;
             }
 
-            /* Fixed Background Layer: Fills the screen without stretching or white gaps */
-            .bg-layer {
+            /* Scrollable Background Container - Image fills & zooms to avoid white edges */
+            .bg-scroll-wrapper {
+                width: 100vw;
+                min-height: 200vh; /* Gives space to scroll up/down through the background */
+                background: url('/static/login_bg.jpg') no-repeat center top;
+                background-size: cover;
+                position: absolute;
+                top: 0;
+                left: 0;
+                z-index: 1;
+            }
+
+            /* Frozen Login Box Wrapper (Stays fixed in middle of screen) */
+            .fixed-login-wrapper {
                 position: fixed;
                 top: 0;
                 left: 0;
                 width: 100vw;
                 height: 100vh;
                 height: 100dvh;
-                background: url('/static/login_bg.jpg') no-repeat center center;
-                background-size: cover;
-                z-index: 1;
-            }
-
-            /* Scrollable Foreground Container */
-            .scroll-container {
-                position: relative;
-                z-index: 2;
                 display: flex;
-                flex-direction: column;
                 justify-content: center;
                 align-items: center;
-                min-height: 180vh; /* Creates scroll space to reveal top and bottom of fixed image */
-                padding: 20px 0;
+                z-index: 2;
+                pointer-events: none; /* Allows scrolling anywhere on screen */
             }
 
             .login-box {
+                pointer-events: auto; /* Re-enables clicking/typing inside form */
                 background: rgba(0, 0, 0, 0.75);
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
@@ -143,7 +146,7 @@ def login():
                 border: 1px solid #444;
                 color: white;
                 border-radius: 6px;
-                font-size: 16px; /* Prevents auto-zoom on mobile inputs */
+                font-size: 16px;
             }
 
             button {
@@ -163,9 +166,9 @@ def login():
         </style>
     </head>
     <body>
-        <div class="bg-layer"></div>
+        <div class="bg-scroll-wrapper"></div>
 
-        <div class="scroll-container">
+        <div class="fixed-login-wrapper">
             <div class="login-box">
                 <h2>EminWatch</h2>
                 ''' + (f'<div class="error">{error}</div>' if error else '') + '''
@@ -178,7 +181,7 @@ def login():
         </div>
     </body>
     </html>
-    '''
+    ''', is_online=is_online, pi_state=pi_state)
 
 @app.route('/logout')
 def logout():
