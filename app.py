@@ -90,7 +90,7 @@ def login():
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             body {
-                background: url('/static/login_bg.jpg') no-repeat center center fixed;
+                background: url('/static/login_bg.jpg') no-repeat 50% 20% fixed;
                 background-size: cover;
                 color: #fff;
                 font-family: sans-serif;
