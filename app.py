@@ -98,10 +98,10 @@ def login():
                 background-color: #0f0f12;
             }
 
-            /* Scrollable Background Container - Image fills & zooms to avoid white edges */
+            /* Scrollable Background Image Wrapper */
             .bg-scroll-wrapper {
-                width: 100vw;
-                min-height: 200vh; /* Gives space to scroll up/down through the background */
+                width: 100%;
+                height: 250vh; /* Extra vertical space so you can scroll up and down to see the image */
                 background: url('/static/login_bg.jpg') no-repeat center top;
                 background-size: cover;
                 position: absolute;
@@ -110,24 +110,14 @@ def login():
                 z-index: 1;
             }
 
-            /* Frozen Login Box Wrapper (Stays fixed in middle of screen) */
-            .fixed-login-wrapper {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100vw;
-                height: 100vh;
-                height: 100dvh;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 2;
-                pointer-events: none; /* Allows scrolling anywhere on screen */
-            }
-
+            /* Login Box Fixed to Screen Center */
             .login-box {
-                pointer-events: auto; /* Re-enables clicking/typing inside form */
-                background: rgba(0, 0, 0, 0.75);
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 999; /* Keeps the box above the scrolling image */
+                background: rgba(0, 0, 0, 0.8);
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
                 padding: 35px;
@@ -168,16 +158,14 @@ def login():
     <body>
         <div class="bg-scroll-wrapper"></div>
 
-        <div class="fixed-login-wrapper">
-            <div class="login-box">
-                <h2>EminWatch</h2>
-                ''' + (f'<div class="error">{error}</div>' if error else '') + '''
-                <form method="post">
-                    <input type="text" name="username" placeholder="Username" required autocomplete="off"><br>
-                    <input type="password" name="password" placeholder="Password" required><br>
-                    <button type="submit">Log In</button>
-                </form>
-            </div>
+        <div class="login-box">
+            <h2>EminWatch</h2>
+            ''' + (f'<div class="error">{error}</div>' if error else '') + '''
+            <form method="post">
+                <input type="text" name="username" placeholder="Username" required autocomplete="off"><br>
+                <input type="password" name="password" placeholder="Password" required><br>
+                <button type="submit">Log In</button>
+            </form>
         </div>
     </body>
     </html>
