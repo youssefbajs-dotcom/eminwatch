@@ -89,36 +89,49 @@ def login():
         <title>EminWatch Login</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            /* Allow vertical scrolling so you can view the full background image */
             html, body {
-                min-height: 100vh;
                 margin: 0;
                 padding: 0;
+                width: 100%;
                 font-family: sans-serif;
                 color: #fff;
                 background-color: #0f0f12;
             }
 
-            body {
+            /* Fixed Background Layer: Fills the screen without stretching or white gaps */
+            .bg-layer {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                height: 100dvh;
+                background: url('/static/login_bg.jpg') no-repeat center center;
+                background-size: cover;
+                z-index: 1;
+            }
+
+            /* Scrollable Foreground Container */
+            .scroll-container {
+                position: relative;
+                z-index: 2;
                 display: flex;
+                flex-direction: column;
                 justify-content: center;
                 align-items: center;
-                min-height: 120vh; /* Adds scroll height to view top and bottom of photo */
-                /* Positioned 50% 50% to lift image up higher than 20% */
-                background: url('/static/login_bg.jpg') no-repeat 50% 50%;
-                background-size: cover;
+                min-height: 180vh; /* Creates scroll space to reveal top and bottom of fixed image */
+                padding: 20px 0;
             }
 
             .login-box {
                 background: rgba(0, 0, 0, 0.75);
-                backdrop-filter: blur(5px);
-                -webkit-backdrop-filter: blur(5px);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
                 padding: 35px;
                 border-radius: 12px;
                 width: 280px;
-                box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-                border: 1px solid rgba(255,255,255,0.1);
-                margin: 40px 0;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+                border: 1px solid rgba(255,255,255,0.15);
             }
 
             input {
@@ -130,7 +143,7 @@ def login():
                 border: 1px solid #444;
                 color: white;
                 border-radius: 6px;
-                font-size: 16px; /* Prevents iOS auto-zoom on focus */
+                font-size: 16px; /* Prevents auto-zoom on mobile inputs */
             }
 
             button {
@@ -150,14 +163,18 @@ def login():
         </style>
     </head>
     <body>
-        <div class="login-box">
-            <h2>EminWatch</h2>
-            ''' + (f'<div class="error">{error}</div>' if error else '') + '''
-            <form method="post">
-                <input type="text" name="username" placeholder="Username" required autocomplete="off"><br>
-                <input type="password" name="password" placeholder="Password" required><br>
-                <button type="submit">Log In</button>
-            </form>
+        <div class="bg-layer"></div>
+
+        <div class="scroll-container">
+            <div class="login-box">
+                <h2>EminWatch</h2>
+                ''' + (f'<div class="error">{error}</div>' if error else '') + '''
+                <form method="post">
+                    <input type="text" name="username" placeholder="Username" required autocomplete="off"><br>
+                    <input type="password" name="password" placeholder="Password" required><br>
+                    <button type="submit">Log In</button>
+                </form>
+            </div>
         </div>
     </body>
     </html>
