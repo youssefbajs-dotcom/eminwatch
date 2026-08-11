@@ -1,8 +1,17 @@
 # app.py - EminWatch Server
-from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for, send_from_directory
-from functools import wraps
-import time
 import os
+import time
+from functools import wraps
+from flask import (
+    Flask,
+    jsonify,
+    redirect,
+    render_template_string,
+    request,
+    send_from_directory,
+    session,
+    url_for,
+)
 
 app = Flask(__name__)
 app.secret_key = "eminwatch_secure_secret_key_change_me"
@@ -17,20 +26,24 @@ pi_state = {
     "battery_voltage": None,
     "camera_stream_url": None,
     "transcripts": [],
-    "recording": False
+    "recording": False,
 }
+
 
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session:
-            return redirect(url_for('login'))
+        if "logged_in" not in session:
+            return redirect(url_for("login"))
         return f(*args, **kwargs)
+
     return decorated_function
+
 
 # --- API ENDPOINTS FOR THE RASPBERRY PI ---
 
-@app.route('/api/telemetry', methods=['POST'])
+
+@app.route("/api/telemetry", methods=["POST"])
 def receive_telemetry():
     """Receives real battery and status updates from the Pi."""
     data = request.json
@@ -43,7 +56,8 @@ def receive_telemetry():
     pi_state["camera_stream_url"] = data.get("stream_url")
     return jsonify({"status": "success", "recording": pi_state["recording"]})
 
-@app.route('/api/transcript', methods=['POST'])
+
+@app.route("/api/transcript", methods=["POST"])
 def receive_transcript():
     """Receives live transcribed speech from the Pi's microphone."""
     data = request.json
@@ -58,31 +72,39 @@ def receive_transcript():
             pi_state["transcripts"].pop()
     return jsonify({"status": "success"})
 
-@app.route('/api/toggle_transcription', methods=['POST'])
+
+@app.route("/api/toggle_transcription", methods=["POST"])
 @login_required
 def toggle_transcription():
     """Toggles the transcription recording state when button is pressed."""
     pi_state["recording"] = not pi_state["recording"]
     return jsonify({"recording": pi_state["recording"]})
 
+
 # Route to serve custom static files (like login_bg.jpg)
-@app.route('/static/<path:filename>')
+@app.route("/static/<path:filename>")
 def custom_static(filename):
-    return send_from_directory('static', filename)
+    return send_from_directory("static", filename)
+
 
 # --- USER AUTHENTICATION ROUTES ---
 
-@app.route('/login', methods=['GET', 'POST'])
+
+@app.route("/login", methods=["GET", "POST"])
 def login():
     error = None
-    if request.method == 'POST':
-        if request.form.get('username') == 'admin' and request.form.get('password') == 'EminWatch2026':
-            session['logged_in'] = True
-            return redirect(url_for('dashboard'))
+    if request.method == "POST":
+        if (
+            request.form.get("username") == "admin"
+            and request.form.get("password") == "EminWatch2026"
+        ):
+            session["logged_in"] = True
+            return redirect(url_for("dashboard"))
         else:
-            error = 'Invalid credentials.'
-    
-    return '''
+            error = "Invalid credentials."
+
+    return render_template_string(
+        """
     <!DOCTYPE html>
     <html>
     <head>
@@ -160,7 +182,9 @@ def login():
 
         <div class="login-box">
             <h2>EminWatch</h2>
-            ''' + (f'<div class="error">{error}</div>' if error else '') + '''
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
             <form method="post">
                 <input type="text" name="username" placeholder="Username" required autocomplete="off"><br>
                 <input type="password" name="password" placeholder="Password" required><br>
@@ -169,22 +193,30 @@ def login():
         </div>
     </body>
     </html>
-    ''', is_online=is_online, pi_state=pi_state)
+    """,
+        error=error,
+    )
 
-@app.route('/logout')
+
+@app.route("/logout")
 def logout():
     """Logs out the current user and clears session."""
-    session.pop('logged_in', None)
-    return redirect(url_for('login'))
+    session.pop("logged_in", None)
+    return redirect(url_for("login"))
+
 
 # --- MAIN DASHBOARD ROUTE ---
 
-@app.route('/')
+
+@app.route("/")
 @login_required
 def dashboard():
-    is_online = pi_state["last_seen"] is not None and (time.time() - pi_state["last_seen"] < 15)
-    
-    return render_template_string('''
+    is_online = pi_state["last_seen"] is not None and (
+        time.time() - pi_state["last_seen"] < 15
+    )
+
+    return render_template_string(
+        """
     <!DOCTYPE html>
     <html>
     <head>
@@ -335,8 +367,12 @@ def dashboard():
         </script>
     </body>
     </html>
-    ''', is_online=is_online, pi_state=pi_state)
+    """,
+        is_online=is_online,
+        pi_state=pi_state,
+    )
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
