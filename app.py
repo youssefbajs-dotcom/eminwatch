@@ -87,48 +87,70 @@ def login():
     <html>
     <head>
         <title>EminWatch Login</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <style>
-            body {
-                background: url('/static/login_bg.jpg') no-repeat 50% 20% fixed;
-                background-size: cover;
-                color: #fff;
+            /* Prevent scrolling completely on all devices */
+            html, body {
+                height: 100dvh;
+                width: 100vw;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
                 font-family: sans-serif;
+                color: #fff;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                height: 100vh;
-                margin: 0;
             }
+
+            /* iPhone & Desktop Full-Screen Background Layer */
+            body::before {
+                content: "";
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100dvh;
+                background: url('/static/login_bg.jpg') no-repeat 50% 20% fixed;
+                background-size: cover;
+                z-index: -1;
+            }
+
             .login-box {
                 background: rgba(0, 0, 0, 0.75);
                 backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
                 padding: 35px;
                 border-radius: 12px;
-                width: 300px;
+                width: 280px;
                 box-shadow: 0 8px 32px rgba(0,0,0,0.5);
                 border: 1px solid rgba(255,255,255,0.1);
             }
+
             input {
                 width: 100%;
-                padding: 10px;
+                padding: 12px;
                 margin-bottom: 12px;
                 box-sizing: border-box;
                 background: #222;
                 border: 1px solid #444;
                 color: white;
-                border-radius: 4px;
+                border-radius: 6px;
+                font-size: 16px; /* Prevents iOS auto-zoom on input tap */
             }
+
             button {
                 width: 100%;
                 padding: 12px;
                 background: #007bff;
                 color: #fff;
                 border: none;
-                border-radius: 4px;
+                border-radius: 6px;
                 font-weight: bold;
                 cursor: pointer;
+                font-size: 16px;
             }
+
             button:hover { background: #0056b3; }
             .error { color: #ff4757; font-size: 0.9em; margin-bottom: 10px; }
         </style>
@@ -138,7 +160,7 @@ def login():
             <h2>EminWatch</h2>
             ''' + (f'<div class="error">{error}</div>' if error else '') + '''
             <form method="post">
-                <input type="text" name="username" placeholder="Username" required><br>
+                <input type="text" name="username" placeholder="Username" required autocomplete="off"><br>
                 <input type="password" name="password" placeholder="Password" required><br>
                 <button type="submit">Log In</button>
             </form>
@@ -170,7 +192,7 @@ def dashboard():
             body { font-family: Arial, sans-serif; background: #0f0f12; color: #f0f0f0; margin: 0; padding: 20px; }
             .container { max-width: 900px; margin: 0 auto; position: relative; }
             
-            /* Header Control Controls (Timer & Logout) */
+            /* Header Controls (Timer & Logout) */
             .header-controls {
                 position: absolute;
                 top: 20px;
