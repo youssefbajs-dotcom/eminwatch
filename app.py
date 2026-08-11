@@ -65,12 +65,12 @@ def toggle_transcription():
     pi_state["recording"] = not pi_state["recording"]
     return jsonify({"recording": pi_state["recording"]})
 
-# Route to serve custom background images if uploaded
-@app.route('/static/<filename>')
+# Route to serve custom static files (like login_bg.jpg)
+@app.route('/static/<path:filename>')
 def custom_static(filename):
     return send_from_directory('static', filename)
 
-# --- USER FRONTEND ROUTES ---
+# --- USER AUTHENTICATION ROUTES ---
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -147,6 +147,14 @@ def login():
     </html>
     '''
 
+@app.route('/logout')
+def logout():
+    """Logs out the current user and clears session."""
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
+
+# --- MAIN DASHBOARD ROUTE ---
+
 @app.route('/')
 @login_required
 def dashboard():
@@ -162,11 +170,17 @@ def dashboard():
             body { font-family: Arial, sans-serif; background: #0f0f12; color: #f0f0f0; margin: 0; padding: 20px; }
             .container { max-width: 900px; margin: 0 auto; position: relative; }
             
-            /* Top Right Timer Styling */
-            .timer-badge {
+            /* Header Control Controls (Timer & Logout) */
+            .header-controls {
                 position: absolute;
                 top: 20px;
                 right: 20px;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+
+            .timer-badge {
                 background: #1a1a24;
                 border: 1px solid #00ff88;
                 color: #00ff88;
@@ -176,6 +190,17 @@ def dashboard():
                 font-size: 1.1em;
                 font-weight: bold;
             }
+
+            .btn-logout {
+                background: #ff4757;
+                color: white;
+                text-decoration: none;
+                padding: 8px 14px;
+                border-radius: 6px;
+                font-size: 0.9em;
+                font-weight: bold;
+            }
+            .btn-logout:hover { background: #ff6b81; }
 
             .card { background: #1a1a24; padding: 20px; margin-bottom: 20px; border-radius: 10px; border: 1px solid #2d2d3f; }
             .status-online { color: #00ff88; font-weight: bold; }
@@ -202,7 +227,10 @@ def dashboard():
     </head>
     <body>
         <div class="container">
-            <div class="timer-badge" id="session-timer">00:00:00</div>
+            <div class="header-controls">
+                <div class="timer-badge" id="session-timer">00:00:00</div>
+                <a href="/logout" class="btn-logout">Log Out</a>
+            </div>
 
             <div class="card">
                 <h1>EminWatch Live View</h1>
