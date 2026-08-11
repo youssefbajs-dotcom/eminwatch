@@ -87,33 +87,26 @@ def login():
     <html>
     <head>
         <title>EminWatch Login</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            /* Prevent scrolling completely on all devices */
+            /* Allow vertical scrolling so you can view the full background image */
             html, body {
-                height: 100dvh;
-                width: 100vw;
+                min-height: 100vh;
                 margin: 0;
                 padding: 0;
-                overflow: hidden;
                 font-family: sans-serif;
                 color: #fff;
+                background-color: #0f0f12;
+            }
+
+            body {
                 display: flex;
                 justify-content: center;
                 align-items: center;
-            }
-
-            /* iPhone & Desktop Full-Screen Background Layer */
-            body::before {
-                content: "";
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100dvh;
-                background: url('/static/login_bg.jpg') no-repeat 50% 20% fixed;
+                min-height: 120vh; /* Adds scroll height to view top and bottom of photo */
+                /* Positioned 50% 50% to lift image up higher than 20% */
+                background: url('/static/login_bg.jpg') no-repeat 50% 50%;
                 background-size: cover;
-                z-index: -1;
             }
 
             .login-box {
@@ -125,6 +118,7 @@ def login():
                 width: 280px;
                 box-shadow: 0 8px 32px rgba(0,0,0,0.5);
                 border: 1px solid rgba(255,255,255,0.1);
+                margin: 40px 0;
             }
 
             input {
@@ -136,7 +130,7 @@ def login():
                 border: 1px solid #444;
                 color: white;
                 border-radius: 6px;
-                font-size: 16px; /* Prevents iOS auto-zoom on input tap */
+                font-size: 16px; /* Prevents iOS auto-zoom on focus */
             }
 
             button {
