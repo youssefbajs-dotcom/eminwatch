@@ -1,7 +1,8 @@
 # app.py - EminWatch Server
-from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for, send_from_directory
 from functools import wraps
 import time
+import os
 
 app = Flask(__name__)
 app.secret_key = "eminwatch_secure_secret_key_change_me"
@@ -9,13 +10,14 @@ app.secret_key = "eminwatch_secure_secret_key_change_me"
 # Secret token so only YOUR Pi can push data to your website
 API_KEY = "eminwatch_pi_token_123"
 
-# Real-time state store (Initially empty / disconnected)
+# Real-time state store
 pi_state = {
     "last_seen": None,
     "battery_percentage": None,
     "battery_voltage": None,
     "camera_stream_url": None,
-    "transcripts": []
+    "transcripts": [],
+    "recording": False
 }
 
 def login_required(f):
@@ -39,7 +41,7 @@ def receive_telemetry():
     pi_state["battery_percentage"] = data.get("battery_pct")
     pi_state["battery_voltage"] = data.get("battery_volts")
     pi_state["camera_stream_url"] = data.get("stream_url")
-    return jsonify({"status": "success"})
+    return jsonify({"status": "success", "recording": pi_state["recording"]})
 
 @app.route('/api/transcript', methods=['POST'])
 def receive_transcript():
@@ -56,13 +58,24 @@ def receive_transcript():
             pi_state["transcripts"].pop()
     return jsonify({"status": "success"})
 
+@app.route('/api/toggle_transcription', methods=['POST'])
+@login_required
+def toggle_transcription():
+    """Toggles the transcription recording state when button is pressed."""
+    pi_state["recording"] = not pi_state["recording"]
+    return jsonify({"recording": pi_state["recording"]})
+
+# Route to serve custom background images if uploaded
+@app.route('/static/<filename>')
+def custom_static(filename):
+    return send_from_directory('static', filename)
+
 # --- USER FRONTEND ROUTES ---
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
     if request.method == 'POST':
-        # Default password setup
         if request.form.get('username') == 'admin' and request.form.get('password') == 'EminWatch2026':
             session['logged_in'] = True
             return redirect(url_for('dashboard'))
@@ -72,14 +85,64 @@ def login():
     return '''
     <!DOCTYPE html>
     <html>
-    <head><title>EminWatch Login</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-    <body style="background:#111; color:#fff; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; margin:0;">
-        <form method="post" style="background:#222; padding:30px; border-radius:8px; width:280px;">
+    <head>
+        <title>EminWatch Login</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {
+                background: url('/static/login_bg.jpg') no-repeat center center fixed;
+                background-size: cover;
+                color: #fff;
+                font-family: sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+            }
+            .login-box {
+                background: rgba(0, 0, 0, 0.75);
+                backdrop-filter: blur(5px);
+                padding: 35px;
+                border-radius: 12px;
+                width: 300px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+                border: 1px solid rgba(255,255,255,0.1);
+            }
+            input {
+                width: 100%;
+                padding: 10px;
+                margin-bottom: 12px;
+                box-sizing: border-box;
+                background: #222;
+                border: 1px solid #444;
+                color: white;
+                border-radius: 4px;
+            }
+            button {
+                width: 100%;
+                padding: 12px;
+                background: #007bff;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+                cursor: pointer;
+            }
+            button:hover { background: #0056b3; }
+            .error { color: #ff4757; font-size: 0.9em; margin-bottom: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
             <h2>EminWatch</h2>
-            <input type="text" name="username" placeholder="Username" required style="width:100%; padding:8px; margin-bottom:10px;"><br>
-            <input type="password" name="password" placeholder="Password" required style="width:100%; padding:8px; margin-bottom:15px;"><br>
-            <button type="submit" style="width:100%; padding:10px; background:#007bff; color:#fff; border:none; border-radius:4px;">Log In</button>
-        </form>
+            ''' + (f'<div class="error">{error}</div>' if error else '') + '''
+            <form method="post">
+                <input type="text" name="username" placeholder="Username" required><br>
+                <input type="password" name="password" placeholder="Password" required><br>
+                <button type="submit">Log In</button>
+            </form>
+        </div>
     </body>
     </html>
     '''
@@ -87,31 +150,62 @@ def login():
 @app.route('/')
 @login_required
 def dashboard():
-    # Determine if Pi is actively sending data (within 15 seconds)
     is_online = pi_state["last_seen"] is not None and (time.time() - pi_state["last_seen"] < 15)
     
     return render_template_string('''
     <!DOCTYPE html>
     <html>
     <head>
-        <title>EminWatch Dashboard</title>
+        <title>EminWatch Live View</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta http-equiv="refresh" content="5">
         <style>
             body { font-family: Arial, sans-serif; background: #0f0f12; color: #f0f0f0; margin: 0; padding: 20px; }
-            .container { max-width: 900px; margin: 0 auto; }
+            .container { max-width: 900px; margin: 0 auto; position: relative; }
+            
+            /* Top Right Timer Styling */
+            .timer-badge {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: #1a1a24;
+                border: 1px solid #00ff88;
+                color: #00ff88;
+                padding: 8px 14px;
+                border-radius: 6px;
+                font-family: monospace;
+                font-size: 1.1em;
+                font-weight: bold;
+            }
+
             .card { background: #1a1a24; padding: 20px; margin-bottom: 20px; border-radius: 10px; border: 1px solid #2d2d3f; }
             .status-online { color: #00ff88; font-weight: bold; }
             .status-offline { color: #ff4757; font-weight: bold; }
             .video-container { width: 100%; min-height: 300px; background: #000; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+            
+            /* Action Button */
+            .btn-action {
+                background: #007bff;
+                color: white;
+                border: none;
+                padding: 10px 18px;
+                border-radius: 6px;
+                font-size: 0.95em;
+                font-weight: bold;
+                cursor: pointer;
+                margin-top: 10px;
+            }
+            .btn-action.active { background: #dc3545; }
+            
             ul { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
             li { background: #252538; padding: 8px 12px; margin-bottom: 6px; border-radius: 4px; font-family: monospace; }
         </style>
     </head>
     <body>
         <div class="container">
+            <div class="timer-badge" id="session-timer">00:00:00</div>
+
             <div class="card">
-                <h1>EminWatch Live Dashboard</h1>
+                <h1>EminWatch Live View</h1>
                 <p>Status: 
                     {% if is_online %}
                         <span class="status-online">● PI ONLINE</span>
@@ -140,7 +234,10 @@ def dashboard():
 
             <div class="card">
                 <h3>Live Microphone Transcriptions</h3>
-                <ul>
+                <button id="transcribe-btn" class="btn-action {{ 'active' if pi_state.recording else '' }}" onclick="toggleTranscription()">
+                    {{ 'Stop Transcription' if pi_state.recording else 'Start Transcription' }}
+                </button>
+                <ul id="transcript-list">
                     {% for item in pi_state.transcripts %}
                         <li>{{ item }}</li>
                     {% else %}
@@ -149,9 +246,45 @@ def dashboard():
                 </ul>
             </div>
         </div>
+
+        <script>
+            // Live Session Timer
+            let secondsElapsed = 0;
+            function updateTimer() {
+                secondsElapsed++;
+                let hrs = Math.floor(secondsElapsed / 3600);
+                let mins = Math.floor((secondsElapsed % 3600) / 60);
+                let secs = secondsElapsed % 60;
+                
+                let formatted = 
+                    String(hrs).padStart(2, '0') + ':' +
+                    String(mins).padStart(2, '0') + ':' +
+                    String(secs).padStart(2, '0');
+                
+                document.getElementById('session-timer').innerText = formatted;
+            }
+            setInterval(updateTimer, 1000);
+
+            // Toggle Transcription Request
+            function toggleTranscription() {
+                fetch('/api/toggle_transcription', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => {
+                        const btn = document.getElementById('transcribe-btn');
+                        if (data.recording) {
+                            btn.innerText = 'Stop Transcription';
+                            btn.classList.add('active');
+                        } else {
+                            btn.innerText = 'Start Transcription';
+                            btn.classList.remove('active');
+                        }
+                    });
+            }
+        </script>
     </body>
     </html>
     ''', is_online=is_online, pi_state=pi_state)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
