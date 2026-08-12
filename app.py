@@ -81,7 +81,7 @@ def toggle_transcription():
     return jsonify({"recording": pi_state["recording"]})
 
 
-# Route to serve custom static files (like login_bg.jpg)
+# Route to serve custom static files
 @app.route("/static/<path:filename>")
 def custom_static(filename):
     return send_from_directory("static", filename)
@@ -120,10 +120,9 @@ def login():
                 background-color: #0f0f12;
             }
 
-            /* Scrollable Background Image Wrapper */
             .bg-scroll-wrapper {
                 width: 100%;
-                height: 250vh; /* Extra vertical space so you can scroll up and down to see the image */
+                height: 250vh;
                 background: url('/static/login_bg.jpg') no-repeat center top;
                 background-size: cover;
                 position: absolute;
@@ -132,13 +131,12 @@ def login():
                 z-index: 1;
             }
 
-            /* Login Box Fixed to Screen Center */
             .login-box {
                 position: fixed;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                z-index: 999; /* Keeps the box above the scrolling image */
+                z-index: 999;
                 background: rgba(0, 0, 0, 0.8);
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
@@ -147,6 +145,7 @@ def login():
                 width: 280px;
                 box-shadow: 0 8px 32px rgba(0,0,0,0.6);
                 border: 1px solid rgba(255,255,255,0.15);
+                text-align: center;
             }
 
             input {
@@ -175,6 +174,13 @@ def login():
 
             button:hover { background: #0056b3; }
             .error { color: #ff4757; font-size: 0.9em; margin-bottom: 10px; }
+
+            audio {
+                width: 100%;
+                margin-top: 15px;
+                height: 32px;
+                border-radius: 6px;
+            }
         </style>
     </head>
     <body>
@@ -190,7 +196,21 @@ def login():
                 <input type="password" name="password" placeholder="Password" required><br>
                 <button type="submit">Log In</button>
             </form>
+
+            <audio id="bg-audio" controls loop>
+                <source src="/static/background_music.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
         </div>
+
+        <script>
+            document.addEventListener('click', function() {
+                const audio = document.getElementById('bg-audio');
+                if (audio.paused) {
+                    audio.play();
+                }
+            }, { once: true });
+        </script>
     </body>
     </html>
     """,
@@ -226,7 +246,6 @@ def dashboard():
             body { font-family: Arial, sans-serif; background: #0f0f12; color: #f0f0f0; margin: 0; padding: 20px; }
             .container { max-width: 900px; margin: 0 auto; position: relative; }
             
-            /* Header Controls (Timer & Logout) */
             .header-controls {
                 position: absolute;
                 top: 20px;
@@ -261,9 +280,26 @@ def dashboard():
             .card { background: #1a1a24; padding: 20px; margin-bottom: 20px; border-radius: 10px; border: 1px solid #2d2d3f; }
             .status-online { color: #00ff88; font-weight: bold; }
             .status-offline { color: #ff4757; font-weight: bold; }
-            .video-container { width: 100%; min-height: 300px; background: #000; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
             
-            /* Action Button */
+            /* Camera Container & Controls */
+            .video-container { 
+                position: relative; 
+                width: 100%; 
+                min-height: 300px; 
+                background: #000; 
+                border-radius: 6px; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                overflow: hidden;
+            }
+
+            .video-controls {
+                display: flex;
+                gap: 10px;
+                margin-top: 10px;
+            }
+
             .btn-action {
                 background: #007bff;
                 color: white;
@@ -273,10 +309,75 @@ def dashboard():
                 font-size: 0.95em;
                 font-weight: bold;
                 cursor: pointer;
-                margin-top: 10px;
             }
             .btn-action.active { background: #dc3545; }
-            
+
+            .btn-snapshot {
+                background: #28a745;
+                color: white;
+                border: none;
+                padding: 10px 18px;
+                border-radius: 6px;
+                font-size: 0.95em;
+                font-weight: bold;
+                cursor: pointer;
+            }
+            .btn-snapshot:hover { background: #218838; }
+
+            .btn-fullscreen {
+                background: #6c5ce7;
+                color: white;
+                border: none;
+                padding: 10px 18px;
+                border-radius: 6px;
+                font-size: 0.95em;
+                font-weight: bold;
+                cursor: pointer;
+            }
+            .btn-fullscreen:hover { background: #5b4bc4; }
+
+            /* Overlay Stats Inside Fullscreen */
+            .fs-overlay {
+                display: none;
+                position: absolute;
+                top: 15px;
+                left: 15px;
+                background: rgba(0, 0, 0, 0.7);
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-family: monospace;
+                font-size: 0.9em;
+                color: #00ff88;
+                z-index: 10;
+                pointer-events: none;
+            }
+
+            .fs-btn-snapshot {
+                display: none;
+                position: absolute;
+                bottom: 20px;
+                right: 20px;
+                z-index: 10;
+            }
+
+            /* Fullscreen Styling Adjustments */
+            :fullscreen .video-container {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+            }
+
+            :fullscreen .fs-overlay,
+            :fullscreen .fs-btn-snapshot {
+                display: block;
+            }
+
+            :fullscreen #live-stream-img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+            }
+
             ul { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
             li { background: #252538; padding: 8px 12px; margin-bottom: 6px; border-radius: 4px; font-family: monospace; }
         </style>
@@ -301,13 +402,26 @@ def dashboard():
 
             <div class="card">
                 <h3>Live Camera Feed</h3>
-                <div class="video-container">
+                <div class="video-container" id="video-box">
+                    <div class="fs-overlay" id="stats-overlay">
+                        FPS: <span id="fps-counter">--</span> | Res: <span id="res-display">--x--</span>
+                    </div>
+
                     {% if is_online and pi_state.camera_stream_url %}
-                        <img src="{{ pi_state.camera_stream_url }}" style="width:100%; border-radius:6px;">
+                        <img id="live-stream-img" src="{{ pi_state.camera_stream_url }}" crossorigin="anonymous" style="width:100%; border-radius:6px;">
                     {% else %}
                         <p style="color:#777;">No active video stream available.</p>
                     {% endif %}
+
+                    <button class="btn-snapshot fs-btn-snapshot" onclick="takeSnapshot()">📷 Take Photo</button>
                 </div>
+
+                {% if is_online and pi_state.camera_stream_url %}
+                    <div class="video-controls">
+                        <button class="btn-snapshot" onclick="takeSnapshot()">📷 Take Photo</button>
+                        <button class="btn-fullscreen" onclick="toggleFullscreen()">⛶ Fullscreen Mode</button>
+                    </div>
+                {% endif %}
             </div>
 
             <div class="card">
@@ -363,6 +477,70 @@ def dashboard():
                             btn.classList.remove('active');
                         }
                     });
+            }
+
+            // Save Camera Snapshot to PC
+            function takeSnapshot() {
+                const img = document.getElementById('live-stream-img');
+                if (!img) return;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                const now = new Date();
+                const timestamp = now.toISOString().replace(/[:T]/g, '-').split('.')[0];
+                const filename = `EminWatch_${timestamp}.jpg`;
+
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = canvas.toDataURL('image/jpeg', 0.95);
+                link.click();
+            }
+
+            // Toggle Fullscreen Mode
+            function toggleFullscreen() {
+                const box = document.getElementById('video-box');
+                if (!document.fullscreenElement) {
+                    if (box.requestFullscreen) {
+                        box.requestFullscreen();
+                    } else if (box.webkitRequestFullscreen) {
+                        box.webkitRequestFullscreen();
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+            }
+
+            // FPS & Resolution Calculator
+            let frameCount = 0;
+            let lastTime = performance.now();
+            const imgEl = document.getElementById('live-stream-img');
+
+            if (imgEl) {
+                imgEl.onload = function() {
+                    frameCount++;
+                    const now = performance.now();
+
+                    // Display resolution quality
+                    if (imgEl.naturalWidth && imgEl.naturalHeight) {
+                        document.getElementById('res-display').innerText = 
+                            `${imgEl.naturalWidth}x${imgEl.naturalHeight}`;
+                    }
+
+                    // Calculate real-time FPS
+                    if (now - lastTime >= 1000) {
+                        const fps = Math.round((frameCount * 1000) / (now - lastTime));
+                        document.getElementById('fps-counter').innerText = fps;
+                        frameCount = 0;
+                        lastTime = now;
+                    }
+                };
             }
         </script>
     </body>
